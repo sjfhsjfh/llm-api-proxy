@@ -1,0 +1,8 @@
+# Rust
+/target
+
+# Log
+*.log
+
+# MacOS
+.DS_Store
