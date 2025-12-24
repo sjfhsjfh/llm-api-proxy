@@ -236,7 +236,7 @@ fn router() -> Router {
 async fn main() {
     colog::init();
     let router = router();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 9723));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 9723));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     info!("Listening on http://{}", addr);
     axum::serve(listener, router).await.unwrap();
