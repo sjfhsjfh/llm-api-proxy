@@ -32,7 +32,7 @@ pub async fn post_responses_fix(
     token: AuthToken,
     Json(payload): Json<Value>,
 ) -> Result<Sse<impl Stream<Item = Result<axum::response::sse::Event, Infallible>>>, ProxyError> {
-    log::info!("Received /responses request");
+    log::debug!("Received /responses request");
     let resp = reqwest::Client::new()
         .post(format!("{}/responses", API_ENDPOINT))
         .header("Host", HOST_HEADER)
@@ -40,7 +40,7 @@ pub async fn post_responses_fix(
         .json(&payload)
         .send()
         .await?;
-    log::info!("Upstream response status: {}", resp.status());
+    log::debug!("Upstream response status: {}", resp.status());
     let resp = if resp.status().is_success() {
         resp
     } else {
@@ -70,8 +70,8 @@ pub async fn post_responses_fix(
                 && let Some(call_id) = item.get("call_id").and_then(|v| v.as_str())
                 && Some("") == item.get("arguments").and_then(|v| v.as_str())
             {
-                log::info!("event type: {}", type_);
-                log::info!(
+                log::debug!("event type: {}", type_);
+                log::debug!(
                     "Get Malformed function call `{}` with empty arguments: {:?}",
                     call_id,
                     value
@@ -86,7 +86,7 @@ pub async fn post_responses_fix(
                 && let Some(output) = resp.get("output")
                 && let Some(output) = output.as_array()
             {
-                log::info!("event type: {}", type_);
+                log::debug!("event type: {}", type_);
                 for item in output {
                     if let Some(type_) = item.get("type").and_then(|v| v.as_str())
                         && type_ == "function_call"
@@ -128,7 +128,7 @@ pub async fn post_responses_fix(
                     && let Ok(value) = serde_json::from_str::<Value>(&event.data)
                     && let Some(type_) = value.get("type").and_then(|v| v.as_str())
                 {
-                    log::info!("event type: {}", type_);
+                    log::debug!("event type: {}", type_);
                 } else {
                     log::warn!("Received non-JSON or malformed event: {:?}", event);
                 }
