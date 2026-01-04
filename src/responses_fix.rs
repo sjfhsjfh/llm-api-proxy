@@ -28,16 +28,35 @@ fn forward_event(e: eventsource_stream::Event) -> axum::response::sse::Event {
     }
 }
 
+fn payload_pretransform(payload: &Value) -> Value {
+    let mut transformed = payload.clone();
+    // For OpenRouter compatibility,
+    // delete the .type == "reasoning" item in the .input array
+    if let Some(input) = transformed.get_mut("input").and_then(|v| v.as_array_mut()) {
+        input.retain(|item| {
+            if let Some(type_) = item.get("type").and_then(|v| v.as_str()) {
+                type_ != "reasoning"
+            } else {
+                true
+            }
+        });
+    } else {
+        log::warn!("Payload does not contain an input array: {}", payload);
+    }
+    transformed
+}
+
 pub async fn post_responses_fix(
     token: AuthToken,
     Json(payload): Json<Value>,
 ) -> Result<Sse<impl Stream<Item = Result<axum::response::sse::Event, Infallible>>>, ProxyError> {
     log::debug!("Received /responses request");
+    let transformed_payload = payload_pretransform(&payload);
     let resp = reqwest::Client::new()
         .post(format!("{}/responses", API_ENDPOINT))
         .header("Host", HOST_HEADER)
         .header("Authorization", token.to_bearer())
-        .json(&payload)
+        .json(&transformed_payload)
         .send()
         .await?;
     log::debug!("Upstream response status: {}", resp.status());
@@ -45,7 +64,11 @@ pub async fn post_responses_fix(
         resp
     } else {
         let status = resp.status();
-        log::warn!("Error response from upstream, payload: {}", payload);
+        log::warn!(
+            "Error response from upstream, payload: {}, transformed_payload: {}",
+            payload,
+            transformed_payload
+        );
         log::warn!(
             "Upstream response body: {}",
             resp.text().await.unwrap_or_default()
