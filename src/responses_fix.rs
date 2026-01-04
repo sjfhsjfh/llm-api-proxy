@@ -59,6 +59,20 @@ pub async fn post_responses_fix(
     let transformed = stream
         .scan(WaitForFixState::default(), |state, event| {
             log::debug!("Received event: {:?}", event);
+
+            if let Ok(event) = &event
+                && event.data == "[DONE]"
+            {
+                log::debug!("Received [DONE] event, flushing queue for safety");
+                let done_event = forward_event(event.clone());
+                let mut events = state.queue.drain(..).map(forward_event).collect::<Vec<_>>();
+                if !events.is_empty() {
+                    log::warn!("Flushing {} queued events before DONE", events.len());
+                }
+                events.push(done_event);
+                return futures::future::ready(Some(events));
+            }
+
             if let Ok(event) = &event
                 && let Ok(value) = serde_json::from_str::<Value>(&event.data)
                 && let Some(type_) = value.get("type").and_then(|v| v.as_str())
