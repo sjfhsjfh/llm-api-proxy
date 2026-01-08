@@ -1,6 +1,6 @@
 # llm-api-proxy
 
-English · [简体中文](README_zh.md)
+[English](README.md) · 简体中文
 
 一个基于 Axum 的轻量级反向代理，用于前置 OpenRouter API。它针对 Codex 与 OpenRouter 协作时的两个问题做修复，其余请求透明转发。
 
